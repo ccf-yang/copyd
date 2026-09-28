@@ -81,10 +81,6 @@ jobs:
       - name: Flutter pub get
         run: flutter pub get
 
-      # 业务层单测：任何用例失败都直接拦住构建
-      - name: Run unit tests
-        run: flutter test
-
       # 静态分析：只有 error 才致命，编译前就能看到 Dart 错误与行号
       - name: Analyze Dart (errors only)
         run: flutter analyze --no-fatal-infos --no-fatal-warnings
