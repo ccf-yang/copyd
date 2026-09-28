@@ -1,0 +1,30 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="1024" height="1024" viewBox="0 0 1024 1024" fill="none">
+  <defs>
+    <linearGradient id="bg" x1="96" y1="40" x2="936" y2="1000" gradientUnits="userSpaceOnUse">
+      <stop stop-color="#6670FF"/>
+      <stop offset="0.52" stop-color="#6C5CF7"/>
+      <stop offset="1" stop-color="#9B5CF6"/>
+    </linearGradient>
+    <linearGradient id="sheen" x1="512" y1="0" x2="512" y2="1024" gradientUnits="userSpaceOnUse">
+      <stop stop-color="#FFFFFF" stop-opacity="0.20"/>
+      <stop offset="0.55" stop-color="#FFFFFF" stop-opacity="0.03"/>
+      <stop offset="1" stop-color="#FFFFFF" stop-opacity="0"/>
+    </linearGradient>
+  </defs>
+
+  <!-- 背景 -->
+  <rect width="1024" height="1024" fill="url(#bg)"/>
+  <rect width="1024" height="1024" fill="url(#sheen)"/>
+
+  <!-- 后面那张卡片 -->
+  <rect x="300" y="180" width="540" height="540" rx="136" fill="#FFFFFF" fill-opacity="0.42"/>
+  <!-- 前卡片的投影 -->
+  <rect x="196" y="308" width="540" height="540" rx="136" fill="#2A1F7A" fill-opacity="0.20"/>
+  <!-- 前面那张卡片 -->
+  <rect x="184" y="296" width="540" height="540" rx="136" fill="#FFFFFF"/>
+
+  <!-- 文案行：固定 / 变量（高亮）/ 固定 -->
+  <rect x="252" y="444" width="180" height="52" rx="26" fill="#C9CDF5"/>
+  <rect x="252" y="540" width="404" height="52" rx="26" fill="#4F5BFF"/>
+  <rect x="252" y="636" width="248" height="52" rx="26" fill="#DDE0F6"/>
+</svg>
