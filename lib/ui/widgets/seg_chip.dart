@@ -61,11 +61,14 @@ class SegChip extends StatelessWidget {
       child: Row(
         mainAxisSize: MainAxisSize.min,
         children: <Widget>[
-          if (!isVar)
-            Padding(
-              padding: const EdgeInsets.only(right: 5),
-              child: Icon(Icons.drag_indicator_rounded, size: 14, color: p.muted2),
+          Padding(
+            padding: const EdgeInsets.only(right: 5),
+            child: Icon(
+              Icons.drag_indicator_rounded,
+              size: 14,
+              color: isVar ? const Color(0xFFA9AEF0) : p.muted2,
             ),
+          ),
           Flexible(
             child: Text(
               label,

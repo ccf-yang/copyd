@@ -3,10 +3,13 @@ import 'package:flutter/material.dart';
 import '../theme/app_theme.dart';
 
 /// 统一的底部弹窗容器（圆角 26、顶部把手、键盘避让）。
+/// [heightFactor] 不为空时，弹窗固定为屏幕高度的该比例（内容自行滚动）；
+/// 为空则高度随内容自适应并整体可滚。
 Future<T?> showAppSheet<T>({
   required BuildContext context,
   required Widget child,
   bool dismissible = true,
+  double? heightFactor,
 }) {
   return showModalBottomSheet<T>(
     context: context,
@@ -17,9 +20,12 @@ Future<T?> showAppSheet<T>({
     barrierColor: AppPalette.of(context).overlay,
     builder: (BuildContext ctx) {
       final AppPalette p = AppPalette.of(ctx);
+      final double? fixedHeight =
+          heightFactor == null ? null : MediaQuery.sizeOf(ctx).height * heightFactor;
       return Padding(
         padding: EdgeInsets.only(bottom: MediaQuery.viewInsetsOf(ctx).bottom),
         child: Container(
+          height: fixedHeight,
           decoration: BoxDecoration(
             color: p.surface,
             borderRadius: const BorderRadius.vertical(
@@ -28,10 +34,15 @@ Future<T?> showAppSheet<T>({
           ),
           child: SafeArea(
             top: false,
-            child: SingleChildScrollView(
-              padding: const EdgeInsets.fromLTRB(18, 10, 18, 20),
-              child: child,
-            ),
+            child: fixedHeight == null
+                ? SingleChildScrollView(
+                    padding: const EdgeInsets.fromLTRB(18, 10, 18, 20),
+                    child: child,
+                  )
+                : Padding(
+                    padding: const EdgeInsets.fromLTRB(18, 10, 18, 16),
+                    child: child,
+                  ),
           ),
         ),
       );

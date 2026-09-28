@@ -294,6 +294,9 @@ Future<void> showSegmentActionsSheet(
   required Segment segment,
 }) async {
   final AppPalette p = AppPalette.of(context);
+  final List<Segment> ordered =
+      Store.instance.active?.sortedSegments ?? const <Segment>[];
+  final int pos = ordered.indexWhere((Segment s) => s.id == segment.id);
 
   await showAppSheet<void>(
     context: context,
@@ -336,6 +339,24 @@ Future<void> showSegmentActionsSheet(
             await Clipboard.setData(ClipboardData(text: text));
             if (!context.mounted) return;
             AppToast.show(context, '已复制');
+          },
+        ),
+        _ActionItem(
+          icon: Icons.keyboard_arrow_up_rounded,
+          label: '前移一个片段',
+          onTap: () {
+            Navigator.of(context).pop();
+            if (pos > 0) Store.instance.moveSegment(segment.id, pos - 1);
+          },
+        ),
+        _ActionItem(
+          icon: Icons.keyboard_arrow_down_rounded,
+          label: '后移一个片段',
+          onTap: () {
+            Navigator.of(context).pop();
+            if (pos >= 0 && pos < ordered.length - 1) {
+              Store.instance.moveSegment(segment.id, pos + 1);
+            }
           },
         ),
         _ActionItem(

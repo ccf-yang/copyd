@@ -27,7 +27,7 @@ class BuilderView extends StatelessWidget {
                 children: <Widget>[
                   _NameField(template: t),
                   const SizedBox(height: 16),
-                  _CanvasHeader(),
+                  const _CanvasHeader(),
                   const SizedBox(height: 10),
                   _Canvas(template: t),
                 ],
@@ -122,6 +122,8 @@ class _NameFieldState extends State<_NameField> {
 }
 
 class _CanvasHeader extends StatelessWidget {
+  const _CanvasHeader();
+
   @override
   Widget build(BuildContext context) {
     final AppPalette p = AppPalette.of(context);
@@ -142,7 +144,7 @@ class _CanvasHeader extends StatelessWidget {
           Icon(Icons.touch_app_outlined, size: 13, color: p.muted2),
           const SizedBox(width: 5),
           Text(
-            '长按拖动排序 · 点击可编辑',
+            '按住组件拖动排序 · 点击可编辑',
             style: TextStyle(fontSize: 11.5, color: p.muted),
           ),
         ],
@@ -151,6 +153,7 @@ class _CanvasHeader extends StatelessWidget {
   }
 }
 
+/// 画布：整块区域都是拖拽落点，按手指坐标计算插入位置。
 class _Canvas extends StatefulWidget {
   const _Canvas({required this.template});
 
@@ -161,77 +164,40 @@ class _Canvas extends StatefulWidget {
 }
 
 class _CanvasState extends State<_Canvas> {
-  int? _hoverIndex;
+  /// 每个 chip 的定位 key，用于把手指坐标换算成插入下标。
+  final Map<String, GlobalKey> _chipKeys = <String, GlobalKey>{};
+
+  /// 当前插入下标（null = 没有拖拽悬停）。
+  int? _insertAt;
 
   @override
   Widget build(BuildContext context) {
     final AppPalette p = AppPalette.of(context);
     final List<Segment> segs = widget.template.sortedSegments;
-
-    final List<Widget> children = <Widget>[];
-    for (int i = 0; i < segs.length; i++) {
-      children.add(_gap(context, i, segs));
-      children.add(_draggableChip(segs[i]));
+    for (final Segment s in segs) {
+      _chipKeys.putIfAbsent(s.id, () => GlobalKey());
     }
-    children.add(_gap(context, segs.length, segs));
-
-    return Container(
-      width: double.infinity,
-      constraints: const BoxConstraints(minHeight: 170),
-      padding: const EdgeInsets.all(14),
-      decoration: BoxDecoration(
-        color: p.isDark ? p.surface2 : const Color(0xFFF8F9FF),
-        border: Border.all(color: p.varBorder, width: 2),
-        borderRadius: BorderRadius.circular(20),
-      ),
-      child: segs.isEmpty
-          ? Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: <Widget>[
-                Row(
-                  children: <Widget>[
-                    Icon(Icons.layers_outlined, size: 14, color: p.muted),
-                    const SizedBox(width: 7),
-                    Text(
-                      '从下方组件库添加固定文本或变量',
-                      style: TextStyle(fontSize: 12, fontWeight: FontWeight.w700, color: p.muted),
-                    ),
-                  ],
-                ),
-                const SizedBox(height: 14),
-                Text(
-                  '示例：您好，{收件人}，您的包裹已发出。',
-                  style: TextStyle(fontSize: 13, color: p.muted2),
-                ),
-              ],
-            )
-          : Wrap(
-              spacing: 0,
-              runSpacing: 8,
-              crossAxisAlignment: WrapCrossAlignment.center,
-              children: children,
-            ),
-    );
-  }
-
-  Widget _gap(BuildContext context, int index, List<Segment> segs) {
-    final AppPalette p = AppPalette.of(context);
-    final bool active = _hoverIndex == index;
 
     return DragTarget<Segment>(
       onWillAcceptWithDetails: (DragTargetDetails<Segment> details) {
-        if (_hoverIndex != index) {
-          setState(() => _hoverIndex = index);
-        }
+        final int idx = _indexFor(segs, details.offset);
+        if (idx != _insertAt) setState(() => _insertAt = idx);
         return true;
       },
+      onMove: (DragTargetDetails<Segment> details) {
+        final int idx = _indexFor(segs, details.offset);
+        if (idx != _insertAt) setState(() => _insertAt = idx);
+      },
       onLeave: (Segment? _) {
-        if (_hoverIndex == index) setState(() => _hoverIndex = null);
+        if (_insertAt != null) setState(() => _insertAt = null);
       },
       onAcceptWithDetails: (DragTargetDetails<Segment> details) {
-        setState(() => _hoverIndex = null);
-        final int from = segs.indexWhere((Segment s) => s.id == details.data.id);
-        int to = index;
+        final int idx = _insertAt ?? segs.length;
+        setState(() => _insertAt = null);
+        // moveSegment 是「先移除再插入」，所以往后拖要减 1
+        final int from =
+            segs.indexWhere((Segment s) => s.id == details.data.id);
+        int to = idx;
         if (from >= 0 && from < to) to -= 1;
         Store.instance.moveSegment(details.data.id, to);
       },
@@ -240,39 +206,130 @@ class _CanvasState extends State<_Canvas> {
         List<Segment?> candidate,
         List<dynamic> rejected,
       ) {
+        final bool hovering = candidate.isNotEmpty;
+        final int? marker = hovering ? _insertAt : null;
+
+        final List<Widget> children = <Widget>[];
+        for (int i = 0; i < segs.length; i++) {
+          if (marker == i) children.add(_insertMarker(p));
+          children.add(_chip(segs[i]));
+        }
+        if (marker != null && marker >= segs.length) {
+          children.add(_insertMarker(p));
+        }
+
         return AnimatedContainer(
-          duration: const Duration(milliseconds: 140),
-          width: active && candidate.isNotEmpty ? 26 : 6,
-          height: 34,
-          decoration: active && candidate.isNotEmpty
-              ? BoxDecoration(
-                  color: p.primarySoft,
-                  borderRadius: BorderRadius.circular(8),
-                )
-              : null,
+          duration: const Duration(milliseconds: 150),
+          width: double.infinity,
+          constraints: const BoxConstraints(minHeight: 170),
+          padding: const EdgeInsets.all(14),
+          decoration: BoxDecoration(
+            color: p.isDark ? p.surface2 : const Color(0xFFF8F9FF),
+            border: Border.all(
+              color: hovering ? AppColors.primary : p.varBorder,
+              width: 2,
+            ),
+            borderRadius: BorderRadius.circular(20),
+          ),
+          child: segs.isEmpty
+              ? _emptyHint(p, hovering)
+              : Wrap(
+                  spacing: 0,
+                  runSpacing: 8,
+                  crossAxisAlignment: WrapCrossAlignment.center,
+                  children: children,
+                ),
         );
       },
     );
   }
 
-  Widget _draggableChip(Segment segment) {
+  Widget _emptyHint(AppPalette p, bool hovering) {
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: <Widget>[
+        Row(
+          children: <Widget>[
+            Icon(
+              hovering ? Icons.add_circle_outline_rounded : Icons.layers_outlined,
+              size: 15,
+              color: hovering ? AppColors.primary : p.muted,
+            ),
+            const SizedBox(width: 7),
+            Expanded(
+              child: Text(
+                hovering ? '松手放到这里' : '从下方组件库添加固定文本或变量',
+                style: TextStyle(
+                  fontSize: 12,
+                  fontWeight: FontWeight.w700,
+                  color: hovering ? AppColors.primary : p.muted,
+                ),
+              ),
+            ),
+          ],
+        ),
+        const SizedBox(height: 14),
+        Text(
+          '示例：您好，{收件人}，您的包裹已发出。',
+          style: TextStyle(fontSize: 13, color: p.muted2),
+        ),
+      ],
+    );
+  }
+
+  Widget _insertMarker(AppPalette p) {
+    return Container(
+      width: 3,
+      height: 34,
+      margin: const EdgeInsets.symmetric(horizontal: 3),
+      decoration: BoxDecoration(
+        gradient: AppColors.primaryGradient,
+        borderRadius: BorderRadius.circular(3),
+      ),
+    );
+  }
+
+  Widget _chip(Segment segment) {
     final Widget chip = SegChip(
       segment: segment,
       onRemove: () => Store.instance.removeSegment(segment.id),
     );
     return LongPressDraggable<Segment>(
+      key: _chipKeys[segment.id],
       data: segment,
+      // 默认 500ms 太长，手感像「拖不动」；缩短到 120ms
+      delay: const Duration(milliseconds: 120),
       hapticFeedbackOnStart: true,
       feedback: Material(
         color: Colors.transparent,
         child: SegChip(segment: segment, dragging: true),
       ),
-      childWhenDragging: Opacity(opacity: 0.32, child: chip),
+      childWhenDragging: Opacity(opacity: 0.28, child: chip),
       child: GestureDetector(
         onTap: () => showSegmentActionsSheet(context, segment: segment),
         child: chip,
       ),
     );
+  }
+
+  /// 手指坐标 → 插入下标：统计「位于手指之前」的 chip 数量。
+  int _indexFor(List<Segment> segs, Offset pointer) {
+    int idx = 0;
+    for (final Segment s in segs) {
+      final BuildContext? ctx = _chipKeys[s.id]?.currentContext;
+      if (ctx == null) continue;
+      final RenderBox? box = ctx.findRenderObject() as RenderBox?;
+      if (box == null || !box.hasSize) continue;
+      final Rect rect = box.localToGlobal(Offset.zero) & box.size;
+      if (pointer.dy > rect.bottom) {
+        idx++; // 手指在整行下方
+      } else if (pointer.dy < rect.top) {
+        continue; // 手指还在更上面的行
+      } else if (pointer.dx > rect.center.dx) {
+        idx++; // 同一行，过了中点
+      }
+    }
+    return idx;
   }
 }
 
@@ -308,7 +365,12 @@ class _TrayState extends State<_Tray> {
           ),
         ],
       ),
-      padding: EdgeInsets.fromLTRB(16, 12, 16, 18 + MediaQuery.paddingOf(context).bottom),
+      padding: EdgeInsets.fromLTRB(
+        16,
+        12,
+        16,
+        18 + MediaQuery.paddingOf(context).bottom,
+      ),
       child: Column(
         mainAxisSize: MainAxisSize.min,
         children: <Widget>[
@@ -436,7 +498,8 @@ class _TrayState extends State<_Tray> {
     final String title = isVar
         ? (segment.name.isEmpty ? '未命名变量' : segment.name)
         : (segment.text.isEmpty ? '（空文本）' : segment.text);
-    final String? sub = isVar && segment.value.isNotEmpty ? '当前值：${segment.value}' : null;
+    final String? sub =
+        isVar && segment.value.isNotEmpty ? '当前值：${segment.value}' : null;
 
     final Widget card = Container(
       width: 172,
@@ -500,6 +563,7 @@ class _TrayState extends State<_Tray> {
 
     return LongPressDraggable<Segment>(
       data: segment,
+      delay: const Duration(milliseconds: 120),
       hapticFeedbackOnStart: true,
       feedback: Material(
         color: Colors.transparent,

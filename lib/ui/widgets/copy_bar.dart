@@ -1,12 +1,12 @@
 import 'package:flutter/material.dart';
-import 'package:flutter/services.dart';
 
 import '../../business/db/store.dart';
-import '../../business/logic/composer.dart';
 import '../theme/app_theme.dart';
-import 'app_toast.dart';
+import 'preview_text.dart';
 
-/// 底部固定栏：实时预览 + 主复制按钮。
+/// 底部固定栏：可点击的实时预览 + 主复制按钮。
+///
+/// 点击预览区会弹出半屏预览框（点外部关闭，内容可滚动）。
 class CopyBar extends StatelessWidget {
   const CopyBar({super.key});
 
@@ -19,22 +19,33 @@ class CopyBar extends StatelessWidget {
         final AppPalette p = AppPalette.of(context);
         final String text = store.activeText;
         final List<String> empties = store.activeEmptyVariables;
+        final bool empty = text.trim().isEmpty;
 
         return Container(
           decoration: BoxDecoration(
             color: p.surface,
             border: Border(top: BorderSide(color: p.line2)),
           ),
-          padding: EdgeInsets.fromLTRB(16, 12, 16, 14 + MediaQuery.paddingOf(context).bottom),
+          padding: EdgeInsets.fromLTRB(
+            16,
+            12,
+            16,
+            14 + MediaQuery.paddingOf(context).bottom,
+          ),
           child: Column(
             mainAxisSize: MainAxisSize.min,
             children: <Widget>[
-              _Preview(text: text, placeholder: store.emptyPlaceholder),
+              _Preview(
+                text: text,
+                placeholder: store.emptyPlaceholder,
+                onTap: () => showPreviewSheet(context),
+              ),
               if (empties.isNotEmpty) ...<Widget>[
                 const SizedBox(height: 8),
                 Row(
                   children: <Widget>[
-                    const Icon(Icons.warning_amber_rounded, size: 14, color: AppColors.warning),
+                    const Icon(Icons.warning_amber_rounded,
+                        size: 14, color: AppColors.warning),
                     const SizedBox(width: 6),
                     Expanded(
                       child: Text(
@@ -53,8 +64,8 @@ class CopyBar extends StatelessWidget {
               ],
               const SizedBox(height: 11),
               _CopyButton(
-                enabled: text.trim().isNotEmpty,
-                onTap: () => _copy(context),
+                enabled: !empty,
+                onTap: () => copyActiveTextToClipboard(context),
               ),
             ],
           ),
@@ -62,103 +73,73 @@ class CopyBar extends StatelessWidget {
       },
     );
   }
-
-  Future<void> _copy(BuildContext context) async {
-    final Store store = Store.instance;
-    final String text = store.activeText;
-    if (text.trim().isEmpty) {
-      AppToast.show(context, '模板内容为空', subtitle: '先添加固定文本或变量', success: false);
-      return;
-    }
-    await Clipboard.setData(ClipboardData(text: text));
-    if (!context.mounted) return;
-    final String? name = store.active?.name;
-    AppToast.show(
-      context,
-      '已复制到剪贴板',
-      subtitle: <String?>[
-        if (name != null && name.isNotEmpty) name,
-        '共 ${textLength(text)} 个字符',
-      ].join(' · '),
-    );
-    store.afterCopied();
-  }
 }
 
 class _Preview extends StatelessWidget {
-  const _Preview({required this.text, required this.placeholder});
+  const _Preview({
+    required this.text,
+    required this.placeholder,
+    required this.onTap,
+  });
 
   final String text;
   final String placeholder;
-
-  List<InlineSpan> _spans() {
-    final List<InlineSpan> spans = <InlineSpan>[];
-    final List<String> parts = text.split(placeholder);
-    for (int i = 0; i < parts.length; i++) {
-      if (i > 0) {
-        spans.add(
-          TextSpan(
-            text: placeholder,
-            style: const TextStyle(
-              color: AppColors.warning,
-              fontWeight: FontWeight.w800,
-              backgroundColor: Color(0x1AF79009),
-            ),
-          ),
-        );
-      }
-      if (parts[i].isNotEmpty) {
-        spans.add(TextSpan(text: parts[i]));
-      }
-    }
-    return spans;
-  }
+  final VoidCallback onTap;
 
   @override
   Widget build(BuildContext context) {
     final AppPalette p = AppPalette.of(context);
-    return Container(
-      width: double.infinity,
-      padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 10),
-      decoration: BoxDecoration(
-        color: p.surface2,
+    return Material(
+      color: Colors.transparent,
+      borderRadius: BorderRadius.circular(13),
+      child: InkWell(
+        onTap: onTap,
         borderRadius: BorderRadius.circular(13),
-      ),
-      child: Row(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: <Widget>[
-          Padding(
-            padding: const EdgeInsets.only(top: 2, right: 9),
-            child: Text(
-              '预览',
-              style: TextStyle(
-                fontSize: 10.5,
-                fontWeight: FontWeight.w800,
-                letterSpacing: 1,
-                color: p.muted,
-              ),
-            ),
+        child: Ink(
+          decoration: BoxDecoration(
+            color: p.surface2,
+            borderRadius: BorderRadius.circular(13),
           ),
-          Expanded(
-            child: text.isEmpty
-                ? Text(
-                    '暂无内容',
-                    style: TextStyle(fontSize: 12.5, color: p.muted2),
-                  )
-                : RichText(
-                    maxLines: 2,
-                    overflow: TextOverflow.ellipsis,
-                    text: TextSpan(
-                      style: TextStyle(
-                        fontSize: 12.5,
-                        height: 1.55,
-                        color: p.ink2,
-                      ),
-                      children: _spans(),
-                    ),
+          padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 10),
+          child: Row(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: <Widget>[
+              Padding(
+                padding: const EdgeInsets.only(top: 2, right: 9),
+                child: Text(
+                  '预览',
+                  style: TextStyle(
+                    fontSize: 10.5,
+                    fontWeight: FontWeight.w800,
+                    letterSpacing: 1,
+                    color: p.muted,
                   ),
+                ),
+              ),
+              Expanded(
+                child: text.isEmpty
+                    ? Text(
+                        '暂无内容',
+                        style: TextStyle(fontSize: 12.5, color: p.muted2),
+                      )
+                    : PreviewText(
+                        text: text,
+                        placeholder: placeholder,
+                        maxLines: 2,
+                      ),
+              ),
+              const SizedBox(width: 6),
+              Padding(
+                padding: const EdgeInsets.only(top: 1),
+                child: Icon(
+                  Icons.open_in_full_rounded,
+                  size: 13,
+                  color: p.muted2,
+                ),
+              ),
+            ],
           ),
-        ],
+        ),
       ),
     );
   }

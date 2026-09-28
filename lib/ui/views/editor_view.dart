@@ -66,17 +66,13 @@ class EditorView extends StatelessWidget {
                     store.reorderByType(SegmentType.fixed, oldIndex, newIndex),
                 itemBuilder: (BuildContext context, int i) {
                   final Segment s = fixed[i];
-                  return FixedBlock(
+                  // 整张卡片都可拖拽（不再只靠 22px 的把手）
+                  return ReorderableDragStartListener(
                     key: ValueKey<String>(s.id),
-                    segment: s,
-                    onEdit: () => showAddFixedSheet(context, existing: s),
-                    dragHandle: ReorderableDragStartListener(
-                      index: i,
-                      child: Icon(
-                        Icons.drag_indicator_rounded,
-                        size: 16,
-                        color: AppPalette.of(context).muted2,
-                      ),
+                    index: i,
+                    child: FixedBlock(
+                      segment: s,
+                      onEdit: () => showAddFixedSheet(context, existing: s),
                     ),
                   );
                 },
