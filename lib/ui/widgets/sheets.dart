@@ -287,6 +287,125 @@ class _VariableSheetState extends State<_VariableSheet> {
   }
 }
 
+// ============================ 变量值：大输入框 ============================
+
+/// 半屏大输入框：文字自动换行，内容多了可滚动，实时写回 Store。
+Future<void> showVariableValueSheet(
+  BuildContext context, {
+  required Segment segment,
+}) {
+  return showAppSheet<void>(
+    context: context,
+    heightFactor: 0.5,
+    child: _VariableValueSheet(segment: segment),
+  );
+}
+
+class _VariableValueSheet extends StatefulWidget {
+  const _VariableValueSheet({required this.segment});
+
+  final Segment segment;
+
+  @override
+  State<_VariableValueSheet> createState() => _VariableValueSheetState();
+}
+
+class _VariableValueSheetState extends State<_VariableValueSheet> {
+  late final TextEditingController _controller;
+
+  @override
+  void initState() {
+    super.initState();
+    final String v = widget.segment.value;
+    _controller = TextEditingController(text: v)
+      ..selection = TextSelection.collapsed(offset: v.length);
+  }
+
+  @override
+  void dispose() {
+    _controller.dispose();
+    super.dispose();
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    final AppPalette p = AppPalette.of(context);
+    final String name =
+        widget.segment.name.isEmpty ? '未命名变量' : widget.segment.name;
+
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.stretch,
+      children: <Widget>[
+        const SheetHandle(),
+        Row(
+          children: <Widget>[
+            Icon(Icons.data_object_rounded, size: 15, color: AppColors.primary),
+            const SizedBox(width: 6),
+            Expanded(
+              child: Text(
+                name,
+                maxLines: 1,
+                overflow: TextOverflow.ellipsis,
+                style: TextStyle(
+                  fontSize: 18,
+                  fontWeight: FontWeight.w800,
+                  letterSpacing: -0.3,
+                  color: p.ink,
+                ),
+              ),
+            ),
+            Text(
+              '${_controller.text.runes.length} 字符',
+              style: TextStyle(fontSize: 12.5, color: p.muted),
+            ),
+          ],
+        ),
+        const SizedBox(height: 12),
+        Expanded(
+          child: Container(
+            decoration: BoxDecoration(
+              color: p.isDark ? p.surface2 : const Color(0xFFFAFBFE),
+              border: Border.all(color: p.varBorder, width: 1.4),
+              borderRadius: BorderRadius.circular(14),
+            ),
+            padding: const EdgeInsets.symmetric(horizontal: 13, vertical: 11),
+            child: TextField(
+              controller: _controller,
+              autofocus: true,
+              expands: true,
+              maxLines: null,
+              minLines: null,
+              textAlignVertical: TextAlignVertical.top,
+              keyboardType: TextInputType.multiline,
+              onChanged: (String v) {
+                Store.instance.setValue(widget.segment.id, v);
+                setState(() {}); // 刷新字数
+              },
+              style: TextStyle(
+                fontSize: 15,
+                height: 1.6,
+                fontWeight: FontWeight.w600,
+                color: p.ink,
+              ),
+              cursorColor: AppColors.primary,
+              decoration: InputDecoration.collapsed(
+                hintText: '输入内容，可换行…',
+                hintStyle: TextStyle(color: p.muted2, fontWeight: FontWeight.w500),
+              ),
+            ),
+          ),
+        ),
+        const SizedBox(height: 14),
+        SheetPrimaryButton(
+          label: '完成',
+          icon: Icons.check_rounded,
+          onTap: () => Navigator.of(context).pop(),
+        ),
+      ],
+    );
+  }
+}
+
 // ============================ 片段操作 ============================
 
 Future<void> showSegmentActionsSheet(

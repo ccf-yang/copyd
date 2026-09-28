@@ -8,18 +8,15 @@ import 'app_toast.dart';
 import 'mini_button.dart';
 
 /// 固定文本块：使用态下半区的只读内容，支持复制 / 编辑 / 删除。
+/// 使用态不参与拖拽（需要调序请进搭建模式）。
 class FixedBlock extends StatelessWidget {
   const FixedBlock({
     super.key,
     required this.segment,
-    this.dragHandle,
     this.onEdit,
   });
 
   final Segment segment;
-
-  /// 由外层 ReorderableListView 提供的拖拽把手（可选）。
-  final Widget? dragHandle;
 
   final VoidCallback? onEdit;
 
@@ -30,7 +27,7 @@ class FixedBlock extends StatelessWidget {
 
     return Container(
       margin: const EdgeInsets.only(bottom: 10),
-      padding: const EdgeInsets.fromLTRB(10, 11, 10, 11),
+      padding: const EdgeInsets.fromLTRB(14, 11, 10, 11),
       decoration: BoxDecoration(
         color: p.surface,
         border: Border.all(color: p.line),
@@ -46,14 +43,6 @@ class FixedBlock extends StatelessWidget {
       child: Row(
         crossAxisAlignment: CrossAxisAlignment.center,
         children: <Widget>[
-          SizedBox(
-            width: 22,
-            child: Center(
-              child: dragHandle ??
-                  Icon(Icons.drag_indicator_rounded, size: 16, color: p.muted2),
-            ),
-          ),
-          const SizedBox(width: 1),
           Expanded(
             child: Text(
               text.isEmpty ? '（空文本）' : text,

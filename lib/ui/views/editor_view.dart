@@ -25,6 +25,7 @@ class EditorView extends StatelessWidget {
         final List<Segment> fixed = t.fixedSegments;
 
         return ListView(
+          keyboardDismissBehavior: ScrollViewKeyboardDismissBehavior.onDrag,
           padding: const EdgeInsets.fromLTRB(16, 16, 16, 24),
           children: <Widget>[
             _SectionHeader(
@@ -57,25 +58,13 @@ class EditorView extends StatelessWidget {
                 onAction: () => showAddFixedSheet(context),
               )
             else
-              ReorderableListView.builder(
-                shrinkWrap: true,
-                physics: const NeverScrollableScrollPhysics(),
-                buildDefaultDragHandles: false,
-                itemCount: fixed.length,
-                onReorder: (int oldIndex, int newIndex) =>
-                    store.reorderByType(SegmentType.fixed, oldIndex, newIndex),
-                itemBuilder: (BuildContext context, int i) {
-                  final Segment s = fixed[i];
-                  // 整张卡片都可拖拽（不再只靠 22px 的把手）
-                  return ReorderableDragStartListener(
-                    key: ValueKey<String>(s.id),
-                    index: i,
-                    child: FixedBlock(
-                      segment: s,
-                      onEdit: () => showAddFixedSheet(context, existing: s),
-                    ),
-                  );
-                },
+              // 使用态不可拖拽；需要调整顺序请进「搭建模式」
+              ...fixed.map(
+                (Segment s) => FixedBlock(
+                  key: ValueKey<String>(s.id),
+                  segment: s,
+                  onEdit: () => showAddFixedSheet(context, existing: s),
+                ),
               ),
             const SizedBox(height: 6),
             _AddButtons(

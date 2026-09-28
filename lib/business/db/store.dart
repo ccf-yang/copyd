@@ -128,6 +128,64 @@ class Store extends ChangeNotifier {
   String exportJson() =>
       const JsonEncoder.withIndent('  ').convert(toJson());
 
+  /// 导入 JSON 文本（设置页「导入模板」）。
+  ///
+  /// - [replace] = true：先清空现有模板与设置；false：按 id 合并（同 id 覆盖）。
+  /// - 返回导入（或覆盖）的模板数量。
+  /// - JSON 不合法或没有 templates 时抛 [FormatException]。
+  int importJson(String raw, {bool replace = false}) {
+    final Object? decoded = jsonDecode(raw);
+    if (decoded is! Map) {
+      throw const FormatException('JSON 顶层必须是一个对象');
+    }
+    final Map<String, dynamic> map = Map<String, dynamic>.from(decoded);
+    final Object? rawList = map['templates'];
+    if (rawList is! List) {
+      throw const FormatException('缺少 templates 列表');
+    }
+
+    final List<Template> incoming = <Template>[];
+    for (final Object? item in rawList) {
+      if (item is Map) {
+        incoming.add(Template.fromJson(Map<String, dynamic>.from(item)));
+      }
+    }
+    if (incoming.isEmpty) {
+      throw const FormatException('templates 里没有可导入的模板');
+    }
+
+    if (replace) _templates.clear();
+    for (final Template t in incoming) {
+      final int i = _templates.indexWhere((Template x) => x.id == t.id);
+      if (i >= 0) {
+        _templates[i] = t;
+      } else {
+        _templates.add(t);
+      }
+    }
+
+    // 只在「替换全部」时应用导入文件里的设置，避免合并时覆盖用户偏好
+    if (replace) {
+      final String? incomingActive = map['activeId']?.toString();
+      if (incomingActive != null && incomingActive.isNotEmpty) {
+        _activeId = incomingActive;
+      }
+      final Object? settings = map['settings'];
+      if (settings is Map) {
+        final Map<String, dynamic> s = Map<String, dynamic>.from(settings);
+        _clearVarsAfterCopy =
+            s['clearVarsAfterCopy'] as bool? ?? _clearVarsAfterCopy;
+        _emptyPlaceholder =
+            s['emptyPlaceholder']?.toString() ?? _emptyPlaceholder;
+        _themeMode = s['themeMode']?.toString() ?? _themeMode;
+      }
+    }
+
+    _ensureActive();
+    _commit();
+    return incoming.length;
+  }
+
   /// 立即落盘。变更方法内部走 [_scheduleSave]，一般无需手动调用。
   Future<void> save() async {
     _saveTimer?.cancel();

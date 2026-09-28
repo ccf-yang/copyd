@@ -51,8 +51,12 @@ class _HomeShellState extends State<HomeShell> {
     return ListenableBuilder(
       listenable: Store.instance,
       builder: (BuildContext context, Widget? _) {
-        return LayoutBuilder(
-          builder: (BuildContext context, BoxConstraints constraints) {
+        // 点击任意空白处收起键盘；子级按钮/输入框的手势优先，不受影响
+        return GestureDetector(
+          behavior: HitTestBehavior.translucent,
+          onTap: () => FocusManager.instance.primaryFocus?.unfocus(),
+          child: LayoutBuilder(
+            builder: (BuildContext context, BoxConstraints constraints) {
             final bool wide = constraints.maxWidth >= 720;
 
             if (wide) {
@@ -85,6 +89,7 @@ class _HomeShellState extends State<HomeShell> {
               body: _main(wide: false),
             );
           },
+          ),
         );
       },
     );

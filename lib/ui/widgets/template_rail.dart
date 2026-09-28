@@ -162,6 +162,8 @@ class _TemplateRailState extends State<TemplateRail> {
             child: TextField(
               controller: _search,
               onChanged: (String v) => setState(() => _query = v),
+              onTapOutside: (_) =>
+                  FocusManager.instance.primaryFocus?.unfocus(),
               style: TextStyle(fontSize: 14, color: p.ink),
               cursorColor: AppColors.primary,
               decoration: InputDecoration.collapsed(

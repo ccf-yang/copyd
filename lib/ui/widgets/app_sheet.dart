@@ -220,6 +220,110 @@ class SheetField extends StatelessWidget {
   }
 }
 
+/// 弹窗内的单个主按钮（如「完成」）。
+class SheetPrimaryButton extends StatelessWidget {
+  const SheetPrimaryButton({
+    super.key,
+    required this.label,
+    required this.onTap,
+    this.icon,
+  });
+
+  final String label;
+  final VoidCallback onTap;
+  final IconData? icon;
+
+  @override
+  Widget build(BuildContext context) {
+    return SizedBox(
+      height: 52,
+      width: double.infinity,
+      child: Material(
+        color: Colors.transparent,
+        borderRadius: BorderRadius.circular(AppRadius.card),
+        child: Ink(
+          decoration: BoxDecoration(
+            gradient: AppColors.primaryGradient,
+            borderRadius: BorderRadius.circular(AppRadius.card),
+          ),
+          child: InkWell(
+            onTap: onTap,
+            borderRadius: BorderRadius.circular(AppRadius.card),
+            child: Center(
+              child: Row(
+                mainAxisSize: MainAxisSize.min,
+                children: <Widget>[
+                  if (icon != null) ...<Widget>[
+                    Icon(icon, color: Colors.white, size: 19),
+                    const SizedBox(width: 9),
+                  ],
+                  Text(
+                    label,
+                    style: const TextStyle(
+                      fontSize: 16,
+                      fontWeight: FontWeight.w800,
+                      color: Colors.white,
+                    ),
+                  ),
+                ],
+              ),
+            ),
+          ),
+        ),
+      ),
+    );
+  }
+}
+
+/// 弹窗内的次级按钮（描边）。
+class SheetSecondaryButton extends StatelessWidget {
+  const SheetSecondaryButton({
+    super.key,
+    required this.label,
+    required this.onTap,
+    this.icon,
+    this.danger = false,
+  });
+
+  final String label;
+  final VoidCallback onTap;
+  final IconData? icon;
+  final bool danger;
+
+  @override
+  Widget build(BuildContext context) {
+    final AppPalette p = AppPalette.of(context);
+    final Color fg = danger ? AppColors.danger : p.ink2;
+    return SizedBox(
+      height: 52,
+      width: double.infinity,
+      child: OutlinedButton(
+        onPressed: onTap,
+        style: OutlinedButton.styleFrom(
+          foregroundColor: fg,
+          side: BorderSide(color: danger ? AppColors.danger : p.line, width: 1.5),
+          shape: RoundedRectangleBorder(
+            borderRadius: BorderRadius.circular(AppRadius.card),
+          ),
+        ),
+        child: Row(
+          mainAxisSize: MainAxisSize.min,
+          children: <Widget>[
+            if (icon != null) ...<Widget>[
+              Icon(icon, size: 18),
+              const SizedBox(width: 8),
+            ],
+            Text(
+              label,
+              style: const TextStyle(fontSize: 15, fontWeight: FontWeight.w800),
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+}
+
 /// 统一样式的输入框。
 class SheetInput extends StatelessWidget {
   const SheetInput({
@@ -242,6 +346,8 @@ class SheetInput extends StatelessWidget {
       controller: controller,
       maxLines: maxLines,
       autofocus: autofocus,
+      onTapOutside: (_) =>
+          FocusManager.instance.primaryFocus?.unfocus(),
       style: TextStyle(fontSize: 15, fontWeight: FontWeight.w600, color: p.ink),
       decoration: InputDecoration(
         hintText: hint,

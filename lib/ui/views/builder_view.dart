@@ -23,6 +23,8 @@ class BuilderView extends StatelessWidget {
           children: <Widget>[
             Expanded(
               child: ListView(
+                keyboardDismissBehavior:
+                    ScrollViewKeyboardDismissBehavior.onDrag,
                 padding: const EdgeInsets.fromLTRB(16, 14, 16, 8),
                 children: <Widget>[
                   _NameField(template: t),
@@ -102,6 +104,8 @@ class _NameFieldState extends State<_NameField> {
             focusNode: _focus,
             onChanged: (String v) =>
                 Store.instance.renameTemplate(widget.template.id, v),
+            onTapOutside: (_) =>
+                FocusManager.instance.primaryFocus?.unfocus(),
             textInputAction: TextInputAction.done,
             style: TextStyle(
               fontSize: 16.5,
@@ -350,6 +354,9 @@ class _TrayState extends State<_Tray> {
     final AppPalette p = AppPalette.of(context);
     final List<Segment> items =
         _tab == 0 ? widget.template.fixedSegments : widget.template.variables;
+    // 组件库高度：屏高 30%，夹在 140~280 之间，内部纵向滚动
+    final double trayHeight =
+        (MediaQuery.sizeOf(context).height * 0.30).clamp(140.0, 280.0);
 
     return Container(
       decoration: BoxDecoration(
@@ -418,19 +425,20 @@ class _TrayState extends State<_Tray> {
           ),
           const SizedBox(height: 10),
           SizedBox(
-            height: 86,
+            height: trayHeight,
             child: items.isEmpty
                 ? Align(
-                    alignment: Alignment.centerLeft,
+                    alignment: Alignment.topLeft,
                     child: Text(
                       _tab == 0 ? '暂无固定文本' : '暂无变量',
                       style: TextStyle(fontSize: 12.5, color: p.muted2),
                     ),
                   )
+                // 纵向列表，可上下滚动
                 : ListView.separated(
-                    scrollDirection: Axis.horizontal,
+                    padding: EdgeInsets.zero,
                     itemCount: items.length,
-                    separatorBuilder: (_, __) => const SizedBox(width: 10),
+                    separatorBuilder: (_, __) => const SizedBox(height: 8),
                     itemBuilder: (BuildContext context, int i) {
                       return _trayCard(items[i]);
                     },
@@ -502,7 +510,7 @@ class _TrayState extends State<_Tray> {
         isVar && segment.value.isNotEmpty ? '当前值：${segment.value}' : null;
 
     final Widget card = Container(
-      width: 172,
+      width: double.infinity,
       padding: const EdgeInsets.fromLTRB(11, 10, 11, 10),
       decoration: BoxDecoration(
         color: isVar
@@ -511,19 +519,27 @@ class _TrayState extends State<_Tray> {
         border: Border.all(color: isVar ? p.varBorder : p.line, width: 1.4),
         borderRadius: BorderRadius.circular(15),
       ),
-      child: Column(
+      child: Row(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: <Widget>[
-          Row(
-            children: <Widget>[
-              Icon(
-                isVar ? Icons.data_object_rounded : Icons.text_fields_rounded,
-                size: 13,
-                color: isVar ? const Color(0xFF7A83E8) : p.muted,
-              ),
-              const SizedBox(width: 6),
-              Expanded(
-                child: Text(
+          // 类型徽标
+          Container(
+            padding: const EdgeInsets.symmetric(horizontal: 7, vertical: 3),
+            decoration: BoxDecoration(
+              color: p.isDark ? p.surface : Colors.white,
+              border: Border.all(color: isVar ? p.varBorder : p.line),
+              borderRadius: BorderRadius.circular(6),
+            ),
+            child: Row(
+              mainAxisSize: MainAxisSize.min,
+              children: <Widget>[
+                Icon(
+                  isVar ? Icons.data_object_rounded : Icons.text_fields_rounded,
+                  size: 11,
+                  color: isVar ? const Color(0xFF7A83E8) : p.muted,
+                ),
+                const SizedBox(width: 4),
+                Text(
                   isVar ? '变量' : '固定',
                   style: TextStyle(
                     fontSize: 10,
@@ -532,31 +548,41 @@ class _TrayState extends State<_Tray> {
                     color: isVar ? const Color(0xFF7A83E8) : p.muted,
                   ),
                 ),
-              ),
-              Icon(Icons.drag_indicator_rounded, size: 14, color: p.muted2),
-            ],
+              ],
+            ),
           ),
-          const SizedBox(height: 6),
+          const SizedBox(width: 10),
           Expanded(
-            child: Text(
-              title,
-              maxLines: 2,
-              overflow: TextOverflow.ellipsis,
-              style: TextStyle(
-                fontSize: 13,
-                height: 1.45,
-                fontWeight: FontWeight.w600,
-                color: isVar ? const Color(0xFF4A52D6) : p.ink2,
-              ),
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              mainAxisSize: MainAxisSize.min,
+              children: <Widget>[
+                Text(
+                  title,
+                  maxLines: 2,
+                  overflow: TextOverflow.ellipsis,
+                  style: TextStyle(
+                    fontSize: 13.5,
+                    height: 1.45,
+                    fontWeight: FontWeight.w600,
+                    color: isVar ? const Color(0xFF4A52D6) : p.ink2,
+                  ),
+                ),
+                if (sub != null)
+                  Padding(
+                    padding: const EdgeInsets.only(top: 2),
+                    child: Text(
+                      sub,
+                      maxLines: 1,
+                      overflow: TextOverflow.ellipsis,
+                      style: TextStyle(fontSize: 11, color: p.muted),
+                    ),
+                  ),
+              ],
             ),
           ),
-          if (sub != null)
-            Text(
-              sub,
-              maxLines: 1,
-              overflow: TextOverflow.ellipsis,
-              style: TextStyle(fontSize: 11, color: p.muted),
-            ),
+          const SizedBox(width: 8),
+          Icon(Icons.drag_indicator_rounded, size: 16, color: p.muted2),
         ],
       ),
     );
@@ -568,8 +594,7 @@ class _TrayState extends State<_Tray> {
       feedback: Material(
         color: Colors.transparent,
         child: SizedBox(
-          width: 172,
-          height: 86,
+          width: MediaQuery.sizeOf(context).width - 32,
           child: Opacity(opacity: 0.96, child: card),
         ),
       ),
