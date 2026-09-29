@@ -35,10 +35,10 @@ class SettingsView extends StatelessWidget {
               _groupLabel(p, '复制行为'),
               _SwitchRow(
                 icon: Icons.auto_awesome_rounded,
-                title: '复制后自动清空变量',
-                subtitle: '下次使用时从空白开始',
-                value: store.clearVarsAfterCopy,
-                onChanged: store.setClearVarsAfterCopy,
+                title: '复制后保留变量值',
+                subtitle: '关闭后：一复制就清空，下次从空白开始',
+                value: store.keepVarsAfterCopy,
+                onChanged: store.setKeepVarsAfterCopy,
               ),
               _ValueRow(
                 icon: Icons.text_fields_rounded,
