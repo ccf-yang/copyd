@@ -48,7 +48,8 @@ class _TemplateRailState extends State<TemplateRail> {
         final bool collapsed = widget.collapsed;
 
         final String q = _query.trim().toLowerCase();
-        final List<Template> all = store.templatesByUpdatedAt;
+        // 按创建顺序展示：编辑 / 使用模板不会改变列表顺序
+        final List<Template> all = store.templates;
         final List<Template> list = q.isEmpty
             ? all
             : all
