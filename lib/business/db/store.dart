@@ -28,7 +28,8 @@ class Store extends ChangeNotifier {
   Timer? _saveTimer;
 
   // ---- 设置项 ----
-  bool _clearVarsAfterCopy = true;
+  // 默认：复制后【保留】变量值，不自动清空（要清空请自行点清空按钮，或关闭这个开关）
+  bool _keepVarsAfterCopy = true;
   String _emptyPlaceholder = kDefaultEmptyPlaceholder;
   String _themeMode = 'system';
 
@@ -39,7 +40,7 @@ class Store extends ChangeNotifier {
   bool get isEmpty => _templates.isEmpty;
   String get activeId => _activeId;
 
-  bool get clearVarsAfterCopy => _clearVarsAfterCopy;
+  bool get keepVarsAfterCopy => _keepVarsAfterCopy;
   String get emptyPlaceholder => _emptyPlaceholder;
   String get themeMode => _themeMode; // system | light | dark
 
@@ -106,7 +107,9 @@ class Store extends ChangeNotifier {
     final Object? settings = json['settings'];
     if (settings is Map) {
       final Map<String, dynamic> s = Map<String, dynamic>.from(settings);
-      _clearVarsAfterCopy = s['clearVarsAfterCopy'] as bool? ?? true;
+      // 只认新键 keepVarsAfterCopy（默认 true）。
+      // 老版本的 clearVarsAfterCopy 有意不再读取，以免升级后变量又被复制动作清掉。
+      _keepVarsAfterCopy = s['keepVarsAfterCopy'] as bool? ?? true;
       _emptyPlaceholder =
           s['emptyPlaceholder']?.toString() ?? kDefaultEmptyPlaceholder;
       _themeMode = s['themeMode']?.toString() ?? 'system';
@@ -118,7 +121,7 @@ class Store extends ChangeNotifier {
         'activeId': _activeId,
         'templates': _templates.map((Template t) => t.toJson()).toList(),
         'settings': <String, dynamic>{
-          'clearVarsAfterCopy': _clearVarsAfterCopy,
+          'keepVarsAfterCopy': _keepVarsAfterCopy,
           'emptyPlaceholder': _emptyPlaceholder,
           'themeMode': _themeMode,
         },
@@ -173,8 +176,8 @@ class Store extends ChangeNotifier {
       final Object? settings = map['settings'];
       if (settings is Map) {
         final Map<String, dynamic> s = Map<String, dynamic>.from(settings);
-        _clearVarsAfterCopy =
-            s['clearVarsAfterCopy'] as bool? ?? _clearVarsAfterCopy;
+        _keepVarsAfterCopy =
+            s['keepVarsAfterCopy'] as bool? ?? _keepVarsAfterCopy;
         _emptyPlaceholder =
             s['emptyPlaceholder']?.toString() ?? _emptyPlaceholder;
         _themeMode = s['themeMode']?.toString() ?? _themeMode;
@@ -224,9 +227,10 @@ class Store extends ChangeNotifier {
 
   // ================= 设置项 =================
 
-  void setClearVarsAfterCopy(bool value) {
-    if (_clearVarsAfterCopy == value) return;
-    _clearVarsAfterCopy = value;
+  /// 复制后是否保留变量值（默认 true = 保留）。
+  void setKeepVarsAfterCopy(bool value) {
+    if (_keepVarsAfterCopy == value) return;
+    _keepVarsAfterCopy = value;
     _commit();
   }
 
@@ -461,9 +465,10 @@ class Store extends ChangeNotifier {
     _commit();
   }
 
-  /// 复制成功后调用：按设置清空变量值。
+  /// 复制成功后调用：默认什么都不做（保留变量值）；
+  /// 只有在设置里关掉「复制后保留变量值」时才清空。
   void afterCopied() {
-    if (_clearVarsAfterCopy) {
+    if (!_keepVarsAfterCopy) {
       clearAllValues();
     }
   }
